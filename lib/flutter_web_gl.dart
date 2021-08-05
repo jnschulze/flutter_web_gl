@@ -299,8 +299,11 @@ class FlutterWebGL {
     Pointer<Int32> depthBuffer = calloc();
     rawOpenGl.glGenRenderbuffers(1, depthBuffer.cast());
     rawOpenGl.glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer.value);
-    rawOpenGl.glRenderbufferStorage(
-        GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
+    //rawOpenGl.glRenderbufferStorage(
+    //    GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
+
+    rawOpenGl.glRenderbufferStorageMultisample(
+        GL_RENDERBUFFER, 4, GL_DEPTH_COMPONENT16, width, height);
 
     rawOpenGl.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
         GL_RENDERBUFFER, depthBuffer.value);

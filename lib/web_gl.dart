@@ -583,7 +583,8 @@ class RenderingContext {
   void checkError([String message = '']) {
     final glError = gl.glGetError();
     if (glError != WebGL.NO_ERROR) {
-      final openGLException = OpenGLException('RenderingContext.$message', glError);
+      final openGLException =
+          OpenGLException('RenderingContext.$message', glError);
       assert(() {
         print(openGLException.toString());
         return true;
@@ -1215,8 +1216,10 @@ class RenderingContext {
         if (infoLen.value > 1) {
           final infoLog = calloc<Int8>(infoLen.value);
 
-          gl.glGetShaderInfoLog(shader.shaderId, infoLen.value, nullptr, infoLog);
-          message = "\nError compiling shader:\n${infoLog.cast<Utf8>().toDartString()}";
+          gl.glGetShaderInfoLog(
+              shader.shaderId, infoLen.value, nullptr, infoLog);
+          message =
+              "\nError compiling shader:\n${infoLog.cast<Utf8>().toDartString()}";
 
           calloc.free(infoLog);
         }
@@ -1339,7 +1342,8 @@ class RenderingContext {
 
   int getAttribLocation(Program program, String name) {
     final locationName = name.toNativeUtf8();
-    final location = gl.glGetAttribLocation(program.programID, locationName.cast());
+    final location =
+        gl.glGetAttribLocation(program.programID, locationName.cast());
     checkError('getAttribLocation');
     calloc.free(locationName);
     return location;
@@ -1388,7 +1392,8 @@ class RenderingContext {
 
   UniformLocation getUniformLocation(Program program, String name) {
     final locationName = name.toNativeUtf8();
-    final location = gl.glGetUniformLocation(program.programID, locationName.cast());
+    final location =
+        gl.glGetUniformLocation(program.programID, locationName.cast());
     checkError('getProgramParameter');
     calloc.free(locationName);
     return UniformLocation._create(location);
@@ -1432,8 +1437,10 @@ class RenderingContext {
         if (infoLen.value > 1) {
           final infoLog = calloc<Int8>(infoLen.value);
 
-          gl.glGetProgramInfoLog(program.programID, infoLen.value, nullptr, infoLog);
-          message = "\nError linking program:\n${infoLog.cast<Utf8>().toDartString()}";
+          gl.glGetProgramInfoLog(
+              program.programID, infoLen.value, nullptr, infoLog);
+          message =
+              "\nError linking program:\n${infoLog.cast<Utf8>().toDartString()}";
 
           calloc.free(infoLog);
         }
@@ -1482,15 +1489,18 @@ class RenderingContext {
 
   // //JS ('texImage2D')
   /// passing null for pixels is perfectly fine, in that case an empty Texture is allocated
-  void texImage2D(target, level, internalformat, width, height, int border, format, type, TypedData? pixels) {
+  void texImage2D(target, level, internalformat, width, height, int border,
+      format, type, TypedData? pixels) {
     /// TODO this can probably optimized depending on if the length can be devided by 4 or 2
     Pointer<Int8>? nativeBuffer;
     if (pixels != null) {
       nativeBuffer = calloc<Int8>(pixels.lengthInBytes);
-      nativeBuffer.asTypedList(pixels.lengthInBytes).setAll(0, pixels.buffer.asUint8List());
+      nativeBuffer
+          .asTypedList(pixels.lengthInBytes)
+          .setAll(0, pixels.buffer.asUint8List());
     }
-    gl.glTexImage2D(target, level, internalformat, width, height, border, format, type,
-        nativeBuffer != null ? nativeBuffer.cast() : nullptr);
+    gl.glTexImage2D(target, level, internalformat, width, height, border,
+        format, type, nativeBuffer != null ? nativeBuffer.cast() : nullptr);
 
     if (nativeBuffer != null) {
       calloc.free(nativeBuffer);
@@ -1506,7 +1516,8 @@ class RenderingContext {
     format = WebGL.RGBA,
     type = WebGL.UNSIGNED_BYTE,
   }) async {
-    texImage2D(target, level, internalformat, image.width, image.height, 0, format, type, (await image.toByteData())!);
+    texImage2D(target, level, internalformat, image.width, image.height, 0,
+        format, type, (await image.toByteData())!);
   }
 
   Future<void> texImage2DfromAsset(
@@ -1518,7 +1529,8 @@ class RenderingContext {
     type = WebGL.UNSIGNED_INT,
   }) async {
     final image = await loadImageFromAsset(assetPath);
-    texImage2D(target, level, internalformat, image.width, image.height, 0, format, type, (await image.toByteData())!);
+    texImage2D(target, level, internalformat, image.width, image.height, 0,
+        format, type, (await image.toByteData())!);
   }
 
   Future<Image> loadImageFromAsset(String assetPath) async {
@@ -1598,7 +1610,11 @@ class RenderingContext {
     checkError('uniform1i');
   }
 
-  // void uniform1iv(UniformLocation? location, v);
+  void uniform1iv(UniformLocation location, List<int> values) {
+    final ptr = int32ListToArrayPointer(values);
+    gl.glUniform1iv(location.locationId, values.length, ptr);
+    checkError('uniform1iv');
+  }
 
   // void uniform2f(UniformLocation? location, num x, num y);
 
@@ -1634,17 +1650,21 @@ class RenderingContext {
 
   // void uniformMatrix2fv(UniformLocation? location, bool transpose, array);
 
-  void uniformMatrix3fv(UniformLocation location, bool transpose, List<double> values) {
+  void uniformMatrix3fv(
+      UniformLocation location, bool transpose, List<double> values) {
     var arrayPointer = floatListToArrayPointer(values);
-    gl.glUniformMatrix3fv(location.locationId, values.length ~/ 9, transpose ? 1 : 0, arrayPointer);
+    gl.glUniformMatrix3fv(location.locationId, values.length ~/ 9,
+        transpose ? 1 : 0, arrayPointer);
     checkError('uniformMatrix4fv');
     calloc.free(arrayPointer);
   }
 
   /// be careful, data always has a length that is a multiple of 16
-  void uniformMatrix4fv(UniformLocation location, bool transpose, List<double> values) {
+  void uniformMatrix4fv(
+      UniformLocation location, bool transpose, List<double> values) {
     var arrayPointer = floatListToArrayPointer(values);
-    gl.glUniformMatrix4fv(location.locationId, values.length ~/ 16, transpose ? 1 : 0, arrayPointer);
+    gl.glUniformMatrix4fv(location.locationId, values.length ~/ 16,
+        transpose ? 1 : 0, arrayPointer);
     checkError('uniformMatrix4fv');
     calloc.free(arrayPointer);
   }
@@ -1672,11 +1692,13 @@ class RenderingContext {
 
   // void vertexAttrib4fv(int indx, values);
 
-  void vertexAttribPointer(int index, int size, int type, bool normalized, int stride, int offset) {
+  void vertexAttribPointer(
+      int index, int size, int type, bool normalized, int stride, int offset) {
     var offsetPointer = Pointer<Void>.fromAddress(offset);
-    gl.glVertexAttribPointer(index, size, type, normalized ? 1 : 0, stride, offsetPointer.cast());
+    gl.glVertexAttribPointer(
+        index, size, type, normalized ? 1 : 0, stride, offsetPointer);
     checkError('vertexAttribPointer');
-    calloc.free(offsetPointer);
+    //calloc.free(offsetPointer);
   }
 
   void viewport(int x, int y, int width, int height) {

@@ -73,6 +73,7 @@ using flutter::EncodableValue;
    std::unique_ptr<FlutterDesktopPixelBuffer> buffer;
     GLuint fbo;
     GLuint rbo;
+    GLuint fbo2;
     int64_t flutterTextureId;
     std::unique_ptr<flutter::TextureVariant> flutterTexture;
   private:
@@ -97,13 +98,54 @@ using flutter::EncodableValue;
     memset(pixels.get(), 0x00, size);
 
 
+    // MSAA readback begin
+    GLuint readbackTextureId;
+glGenTextures(1, &readbackTextureId);
+glBindTexture(GL_TEXTURE_2D, readbackTextureId);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenFramebuffers(1, &fbo2);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, readbackTextureId, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    
+
+
+
+    // msaa readback end
+
+
+    /*
+glGenRenderbuffers(1, &rbo);
+glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+
+
+
+*/
+
+
+
+
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+
+
 
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);  
 
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
+    //glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
+    glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_RGBA8, width, height);
     auto error = glGetError();
     if (error != GL_NO_ERROR)
     {
@@ -195,17 +237,51 @@ void FlutterWebGlPlugin::HandleMethodCall(
   else if (method_call.method_name().compare("initOpenGL") == 0) 
   {
       static EGLContext  context;
+      static int64_t dummySurfaceForDartSide;
+      static int64_t configId;
+
+
       if (context != nullptr)
       {
+        std::cerr << "HAVE CONTEXTT" << std::endl;
+
         // this means initOpenGL() was already called, which makes sense if you want to acess a Texture not only 
         // from the main thread but also from an isolate. On the plugin layer here that doesn't bother because all 
         // by `initOpenGL``in Dart created contexts will be linked to the one we got from the very first call to `initOpenGL`
         // we return this information so that the Dart side can dispose of one context.
-        auto response = flutter::EncodableValue(context);
-        result->Success(response);
+        //auto response = flutter::EncodableValue(context);
+        //result->Success(response);
+        /*
+      auto response = flutter::EncodableValue(flutter::EncodableMap{
+          {flutter::EncodableValue("context"),
+           flutter::EncodableValue((int64_t) context)},
+          {flutter::EncodableValue("dummySurface"),
+           flutter::EncodableValue(dummySurfaceForDartSide)},
+          {flutter::EncodableValue("eglConfigId"),
+           flutter::EncodableValue(configId)}
+          });
+      
+          */
+     // auto response = flutter::EncodableValue(true);
 
-        return;
+      //result->Success(response);
+
+
+      auto response = flutter::EncodableValue(flutter::EncodableMap{
+          {flutter::EncodableValue("context"),
+           flutter::EncodableValue((int64_t) context)},
+          {flutter::EncodableValue("dummySurface"),
+           flutter::EncodableValue(dummySurfaceForDartSide)},
+          {flutter::EncodableValue("eglConfigId"),
+           flutter::EncodableValue(configId)}
+          });
+      result->Success(response);
+
+      return;
+
       }
+
+      std::cerr << "CREATE CONTEXT" << std::endl;
 
       auto display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
       EGLint major;
@@ -238,8 +314,10 @@ void FlutterWebGlPlugin::HandleMethodCall(
           return;
       }
 
-      EGLint configId;
-      eglGetConfigAttrib(display,config,EGL_CONFIG_ID,&configId);
+      EGLint configId2;
+      eglGetConfigAttrib(display,config,EGL_CONFIG_ID,&configId2);
+      configId = (int64_t)configId2;
+
 
       const EGLint surfaceAttributes[] = {
         EGL_WIDTH, 16,
@@ -257,7 +335,7 @@ void FlutterWebGlPlugin::HandleMethodCall(
 
       // This is just a dummy surface that it needed to make an OpenGL context current (bind it to this thread)
       auto dummySurface = eglCreatePbufferSurface(display, config, surfaceAttributes);
-      auto dummySurfaceForDartSide = eglCreatePbufferSurface(display, config, surfaceAttributes);
+      dummySurfaceForDartSide = (int64_t)eglCreatePbufferSurface(display, config, surfaceAttributes);
       
       eglMakeCurrent(display, dummySurface, dummySurface, context);
 
@@ -273,13 +351,14 @@ void FlutterWebGlPlugin::HandleMethodCall(
 
       /// we send back the context. This might look a bit strange, but is necessary to allow this function to be called
       /// from Dart Isolates.
+
       auto response = flutter::EncodableValue(flutter::EncodableMap{
           {flutter::EncodableValue("context"),
            flutter::EncodableValue((int64_t) context)},
           {flutter::EncodableValue("dummySurface"),
-           flutter::EncodableValue((int64_t) dummySurfaceForDartSide)},
+           flutter::EncodableValue(dummySurfaceForDartSide)},
           {flutter::EncodableValue("eglConfigId"),
-           flutter::EncodableValue((int64_t) configId)}
+           flutter::EncodableValue(configId)}
           });
       result->Success(response);
       return;
@@ -361,10 +440,31 @@ void FlutterWebGlPlugin::HandleMethodCall(
       }
 
       auto currentTexture = flutterGLTextures[textureId].get();
-      glBindFramebuffer(GL_FRAMEBUFFER, currentTexture->fbo);
+      auto width = (GLsizei)currentTexture->buffer->width;
+     auto height = (GLsizei)currentTexture->buffer->height;
 
-       glReadPixels(0, 0, (GLsizei)currentTexture->buffer->width, (GLsizei)currentTexture->buffer->height, GL_RGBA, GL_UNSIGNED_BYTE, (void*)currentTexture->buffer->buffer);
-       textureRegistrar->MarkTextureFrameAvailable(textureId);
+
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, currentTexture->fbo); // msaa
+     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, currentTexture->fbo2); // normal
+
+
+
+      glBlitFramebuffer(0, 0, width, height,             // src rect
+                  0, 0, width, height,             // dst rect
+                  GL_COLOR_BUFFER_BIT,             // buffer mask
+                  GL_LINEAR); 
+
+
+
+     glBindFramebuffer(GL_FRAMEBUFFER, currentTexture->fbo2);
+
+     glReadPixels(0, 0, (GLsizei)currentTexture->buffer->width, (GLsizei)currentTexture->buffer->height, GL_RGBA, GL_UNSIGNED_BYTE, (void*)currentTexture->buffer->buffer);
+     //  textureRegistrar->MarkTextureFrameAvailable(textureId);
+
+     // glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, (void*)currentTexture->buffer->buffer);
+     textureRegistrar->MarkTextureFrameAvailable(textureId);
+
+
 
        result->Success();
   }
