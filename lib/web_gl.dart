@@ -1182,6 +1182,12 @@ class RenderingContext {
     ptr.asTypedList(list.length).setAll(0, list);
     return ptr;
   }
+
+  Pointer<Uint32> uInt32ListToArrayPointer(List<int> list) {
+    final ptr = calloc<Uint32>(list.length);
+    ptr.asTypedList(list.length).setAll(0, list);
+    return ptr;
+  }
   // void bufferSubData(int target, int offset, data);
 
   // int checkFramebufferStatus(int target);
@@ -1280,7 +1286,14 @@ class RenderingContext {
 
   // void deleteShader(Shader? shader);
 
-  // void deleteTexture(WebGLTexture? texture);
+  void deleteTexture(WebGLTexture? texture) {
+    if (texture != null) {
+      final ptr = uInt32ListToArrayPointer([texture.textureId]);
+      gl.glDeleteTextures(1, ptr);
+      checkError('deleteTexture');
+      calloc.free(ptr);
+    }
+  }
 
   // void depthFunc(int func);
 
