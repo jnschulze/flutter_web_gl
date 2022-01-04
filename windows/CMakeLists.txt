@@ -20,7 +20,7 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
   set(LIB_EGL_NAME "libEGL.dll")
   set(ANGLE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/angle")
   set(OPENGL_ARCH ${MSVC_CXX_ARCHITECTURE_ID})
-  set(OPENGL_BUILD_TYPE "$<$<CONFIG:Debug>:debug>$<$<CONFIG:Release>:release>")
+  set(OPENGL_BUILD_TYPE "$<$<CONFIG:Debug>:debug>$<$<CONFIG:Profile>:release>$<$<CONFIG:Release>:release>")
   set(OPENGL_LIB_DIR "${ANGLE_DIR}/${OPENGL_ARCH}/${OPENGL_BUILD_TYPE}")
   set(OPENGL_LIB "${OPENGL_LIB_DIR}/${LIB_GLES_NAME}")
   set(EGL_LIB "${OPENGL_LIB_DIR}/${LIB_EGL_NAME}")
